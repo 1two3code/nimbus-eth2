@@ -16,6 +16,7 @@ import
   chronos, confutils, metrics, metrics/chronos_httpserver,
   chronicles, bearssl, blscurve, presto,
   json_serialization/std/[options, sets, net], serialization/errors,
+  taskpools,
 
   eth/[keys, async_utils], eth/net/nat,
   eth/db/[kvstore, kvstore_sqlite3],
@@ -113,6 +114,22 @@ proc init*(T: type BeaconNode,
            genesisStateContents: string,
            genesisDepositsSnapshotContents: string): BeaconNode {.
     raises: [Defect, CatchableError].} =
+
+  var taskpool: TaskpoolPtr
+
+  try:
+    if config.numThreads < 0:
+      fatal "The number of threads --numThreads cannot be negative."
+      quit 1
+    elif config.numThreads == 0:
+      taskpool = TaskpoolPtr.new()
+    else:
+      taskpool = TaskpoolPtr.new(numThreads = config.numThreads)
+
+    info "Threadpool started", numThreads = taskpool.numThreads
+  except Exception as exc:
+    raise newException(Defect, "Failure in taskpool initialization.")
+
   let
     db = BeaconChainDB.new(
       cfg, config.databaseDir, inMemory = false)
@@ -244,7 +261,7 @@ proc init*(T: type BeaconNode,
     chainDagFlags = if config.verifyFinalization: {verifyFinalization}
                      else: {}
     dag = ChainDAGRef.init(cfg, db, chainDagFlags)
-    quarantine = QuarantineRef.init(rng)
+    quarantine = QuarantineRef.init(rng, taskpool)
     databaseGenesisValidatorsRoot =
       getStateField(dag.headState.data, genesis_validators_root)
 
@@ -348,7 +365,7 @@ proc init*(T: type BeaconNode,
     processor = Eth2Processor.new(
       config.doppelgangerDetection,
       blockProcessor, dag, attestationPool, exitPool, validatorPool,
-      quarantine, rng, getTime)
+      quarantine, rng, getTime, taskpool)
 
   var node = BeaconNode(
     nickname: nickname,
@@ -371,7 +388,8 @@ proc init*(T: type BeaconNode,
     processor: processor,
     blockProcessor: blockProcessor,
     consensusManager: consensusManager,
-    requestManager: RequestManager.init(network, blockProcessor)
+    requestManager: RequestManager.init(network, blockProcessor),
+    taskpool: taskpool
   )
 
   # set topic validation routine

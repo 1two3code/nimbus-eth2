@@ -12,7 +12,7 @@ import
   std/[sets, tables, hashes],
   # Status libraries
   stew/endians2, chronicles,
-  eth/keys,
+  eth/keys, taskpools,
   # Internals
   ../spec/[crypto, digest, signatures_batch, forkedbeaconstate_helpers],
   ../spec/datatypes/[phase0, altair],
@@ -77,6 +77,10 @@ type
     ## A reference to the Nimbus application-wide RNG
 
     inAdd*: bool
+
+    taskpool*: TaskPoolPtr
+
+  TaskPoolPtr* = TaskPool
 
   MissingBlock* = object
     tries*: int

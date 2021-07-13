@@ -12,6 +12,7 @@ import
 
   # Nimble packages
   chronos, json_rpc/servers/httpserver, presto,
+  taskpools,
 
   # Local modules
   ./conf, ./beacon_clock, ./beacon_chain_db,
@@ -31,6 +32,7 @@ export
 
 type
   RpcServer* = RpcHttpServer
+  TaskPoolPtr* = TaskPool
 
   BeaconNode* = ref object
     nickname*: string
@@ -58,6 +60,7 @@ type
     blockProcessor*: ref BlockProcessor
     consensusManager*: ref ConsensusManager
     attachedValidatorBalanceTotal*: uint64
+    taskpool*: TaskPoolPtr
 
 const
   MaxEmptySlotCount* = uint64(10*60) div SECONDS_PER_SLOT

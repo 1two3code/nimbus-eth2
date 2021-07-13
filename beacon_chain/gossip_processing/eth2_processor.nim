@@ -100,7 +100,9 @@ proc new*(T: type Eth2Processor,
           validatorPool: ref ValidatorPool,
           quarantine: QuarantineRef,
           rng: ref BrHmacDrbgContext,
-          getTime: GetTimeFn): ref Eth2Processor =
+          getTime: GetTimeFn,
+          taskpool: batch_validation.TaskPoolPtr
+         ): ref Eth2Processor =
   (ref Eth2Processor)(
     doppelGangerDetectionEnabled: doppelGangerDetectionEnabled,
     doppelgangerDetection: DoppelgangerProtection(
@@ -116,7 +118,8 @@ proc new*(T: type Eth2Processor,
       rng = rng,
       # Only run eager attestation signature verification if we're not
       # processing blocks in order to give priority to block processing
-      eager = proc(): bool = not blockProcessor[].hasBlocks())
+      eager = proc(): bool = not blockProcessor[].hasBlocks(),
+      taskpool)
   )
 
 proc getCurrentBeaconTime*(self: Eth2Processor|ref Eth2Processor): BeaconTime =
