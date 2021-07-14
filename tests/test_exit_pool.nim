@@ -8,7 +8,7 @@
 {.used.}
 
 import chronicles, chronos
-import eth/keys
+import eth/keys, taskpools
 import ../beacon_chain/spec/[datatypes, presets]
 import ../beacon_chain/consensus_object_pools/[block_quarantine, blockchain_dag, exit_pool]
 import "."/[testutil, testdbutil]
@@ -16,7 +16,8 @@ import "."/[testutil, testdbutil]
 proc getExitPool(): auto =
   let dag =
     init(ChainDAGRef, defaultRuntimeConfig, makeTestDB(SLOTS_PER_EPOCH * 3), {})
-  newClone(ExitPool.init(dag, QuarantineRef.init(keys.newRng())))
+  let taskpool = Taskpool.new()
+  newClone(ExitPool.init(dag, QuarantineRef.init(keys.newRng(), taskpool)))
 
 suite "Exit pool testing suite":
   setup:
