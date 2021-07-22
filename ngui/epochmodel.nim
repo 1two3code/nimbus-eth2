@@ -1,13 +1,14 @@
 import NimQml
 
 import
-  ./slotlist,
-  ../beacon_chain/[spec/eth2_apis/beacon_rpc_client]
+  ../beacon_chain/rpc/beacon_rest_client,
+  ../beacon_chain/spec/datatypes,
+  ./slotlist
 
 QtObject:
   type
     EpochModel* = ref object of QObject
-      client: RpcHttpClient
+      client: RestClientRef
       epoch: int
       slotList: SlotList
 
@@ -17,7 +18,7 @@ QtObject:
   proc setup*(self: EpochModel) =
     self.QObject.setup
 
-  proc newEpochModel*(client: RpcHttpClient, epoch: int): EpochModel =
+  proc newEpochModel*(client: RestClientRef, epoch: int): EpochModel =
     let data = client.loadSlots(epoch.Epoch)
     let res = EpochModel(client: client, epoch: epoch, slotList: newSlotList(data))
     res.setup()

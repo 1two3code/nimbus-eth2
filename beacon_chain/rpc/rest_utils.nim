@@ -419,6 +419,17 @@ proc decodeString*(t: typedesc[PeerStateKind],
   else:
     err("Incorrect peer's state value")
 
+proc encodeString*(value: PeerStateKind): Result[string, cstring] =
+  case value
+  of PeerStateKind.Disconnected:
+    ok("disconnected")
+  of PeerStateKind.Connecting:
+    ok("connecting")
+  of PeerStateKind.Connected:
+    ok("connected")
+  of PeerStateKind.Disconnecting:
+    ok("disconnecting")
+
 proc decodeString*(t: typedesc[PeerDirectKind],
                    value: string): Result[PeerDirectKind, cstring] =
   case value
@@ -428,6 +439,13 @@ proc decodeString*(t: typedesc[PeerDirectKind],
     ok(PeerDirectKind.Outbound)
   else:
     err("Incorrect peer's direction value")
+
+proc encodeString*(value: PeerDirectKind): Result[string, cstring] =
+  case value
+  of PeerDirectKind.Inbound:
+    ok("inbound")
+  of PeerDirectKind.Outbound:
+    ok("outbound")
 
 proc decodeString*(t: typedesc[EventTopic],
                    value: string): Result[EventTopic, cstring] =
@@ -578,6 +596,15 @@ proc init*(t: typedesc[StateIdent], v: Slot): StateIdent =
 
 proc init*(t: typedesc[StateIdent], v: Eth2Digest): StateIdent =
   StateIdent(kind: StateQueryKind.Root, root: v)
+
+proc init*(t: typedesc[BlockIdent], v: BlockIdentType): BlockIdent =
+  BlockIdent(kind: BlockQueryKind.Named, value: v)
+
+proc init*(t: typedesc[BlockIdent], v: Slot): BlockIdent =
+  BlockIdent(kind: BlockQueryKind.Slot, slot: v)
+
+proc init*(t: typedesc[BlockIdent], v: Eth2Digest): BlockIdent =
+  BlockIdent(kind: BlockQueryKind.Root, root: v)
 
 proc init*(t: typedesc[ValidatorIdent], v: ValidatorIndex): ValidatorIdent =
   ValidatorIdent(kind: ValidatorQueryKind.Index, index: RestValidatorIndex(v))

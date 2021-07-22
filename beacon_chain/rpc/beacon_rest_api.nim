@@ -956,6 +956,11 @@ proc publishBlock*(body: phase0.SignedBeaconBlock): RestPlainResponse {.
      meth: MethodPost.}
   ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/publishBlock
 
+proc getBlock*(block_id: BlockIdent): RestResponse[DataRestSignedBeaconBlock] {.
+     rest, endpoint: "/api/eth/v1/beacon/blocks/{block_id}",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/getBlock
+
 proc getStateValidator*(state_id: StateIdent,
                         validator_id: ValidatorIdent
                        ): RestResponse[DataRestValidator] {.
@@ -971,7 +976,43 @@ proc getStateValidators*(state_id: StateIdent,
      meth: MethodGet.}
   ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/getStateValidators
 
+proc getBlockHeaders*(slot: Option[Slot], parent_root: Option[Eth2Digest]): RestResponse[DataRestBlockHeaders] {.
+     rest, endpoint: "/api/eth/v1/beacon/headers",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/getBlockHeaders
+
+proc getBlockHeader*(block_id: BlockIdent): RestResponse[DataRestBlockHeaders] {.
+     rest, endpoint: "/api/eth/v1/beacon/headers/{block_id}",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/getBlockHeader
+
+proc getPoolAttestations*(
+    slot: Option[Slot],
+    committee_index: Option[CommitteeIndex]): RestResponse[DataRestPoolAttestations] {.
+     rest, endpoint: "/api/eth/v1/beacon/pool/attestations",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/getPoolAttestations
+
 proc submitPoolAttestations*(body: seq[Attestation]): RestPlainResponse {.
      rest, endpoint: "/eth/v1/beacon/pool/attestations",
      meth: MethodPost.}
   ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/submitPoolAttestations
+
+proc getPoolAttesterSlashings*(): RestResponse[DataRestPoolAttesterSlashings] {.
+     rest, endpoint: "/api/eth/v1/beacon/pool/attester_slashings",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/getPoolAttesterSlashings
+
+proc getPoolProposerSlashings*(): RestResponse[DataRestPoolProposerSlashings] {.
+     rest, endpoint: "/api/eth/v1/beacon/pool/proposer_slashings",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/getPoolProposerSlashings
+
+proc getPoolVoluntaryExits*(): RestResponse[DataRestPoolVoluntaryExits] {.
+     rest, endpoint: "/api/eth/v1/beacon/pool/voluntary_exits",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Beacon/getPoolVoluntaryExits
+
+proc getStateFinalityCheckpoints*(state_id: StateIdent): RestResponse[DataRestBeaconStateFinalityCheckpoints] {.
+     rest, endpoint: "/api/eth/v1/beacon/states/{state_id}/finality_checkpoints",
+     meth: MethodGet.}

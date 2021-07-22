@@ -1,9 +1,9 @@
 import NimQml
 
 import
-  std/[sequtils, json, times],
+  std/[sequtils, times],
   NimQml,
-  ../beacon_chain/eth2_json_rpc_serialization,
+  ../beacon_chain/rpc/beacon_rest_client,
   ../beacon_chain/spec/[datatypes, crypto],
   ./attestationlist, ./depositlist, ./utils
 
@@ -59,16 +59,16 @@ QtObject:
   proc randao_reveal*(self: BlockModel): string {.slot.} = toDisplayHex(self.blck.message.body.randao_reveal)
   QtProperty[string] randao_reveal: read = randao_reveal
 
-  proc eth1_data*(self: BlockModel): string {.slot.} = (%*self.blck.message.body.eth1_data).pretty()
+  proc eth1_data*(self: BlockModel): string {.slot.} = RestJson.encode(self.blck.message.body.eth1_data, pretty=true)
   QtProperty[string] eth1_data: read = eth1_data
 
   proc graffiti*(self: BlockModel): string {.slot.} = $self.blck.message.body.graffiti
   QtProperty[string] graffiti: read = graffiti
 
-  proc proposer_slashings*(self: BlockModel): string {.slot.} = (%*self.blck.message.body.proposer_slashings.asSeq()).pretty()
+  proc proposer_slashings*(self: BlockModel): string {.slot.} = RestJson.encode(self.blck.message.body.proposer_slashings, pretty=true)
   QtProperty[string] proposer_slashings: read = proposer_slashings
 
-  proc attester_slashings*(self: BlockModel): string {.slot.} = (%*self.blck.message.body.attester_slashings.asSeq()).pretty()
+  proc attester_slashings*(self: BlockModel): string {.slot.} = RestJson.encode(self.blck.message.body.attester_slashings.asSeq(), pretty=true)
   QtProperty[string] attester_slashings: read = attester_slashings
 
   proc attestations*(self: BlockModel): QVariant {.slot.} = newQVariant(self.attestationsx)
@@ -77,7 +77,7 @@ QtObject:
   proc deposits*(self: BlockModel): QVariant {.slot.} = newQVariant(self.depositsx)
   QtProperty[QVariant] deposits: read = deposits
 
-  proc voluntary_exits*(self: BlockModel): string {.slot.} = (%*self.blck.message.body.voluntary_exits.asSeq()).pretty()
+  proc voluntary_exits*(self: BlockModel): string {.slot.} = RestJson.encode(self.blck.message.body.voluntary_exits.asSeq(), pretty=true)
   QtProperty[string] voluntary_exits: read = voluntary_exits
 
   proc signature*(self: BlockModel): string {.slot.} = toDisplayHex(self.blck.signature)

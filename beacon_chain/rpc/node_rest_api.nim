@@ -292,12 +292,29 @@ proc installNodeApiHandlers*(router: var RestRouter, node: BeaconNode) =
     "/api/eth/v1/node/health"
   )
 
+proc getPeers*(
+    state: seq[PeerStateKind],
+    direction: seq[PeerDirectKind]): RestResponse[DataRestPeers] {.
+     rest, endpoint: "/eth/v1/node/peers",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Node/getPeers
+
 proc getSyncingStatus*(): RestResponse[DataRestSyncInfo] {.
      rest, endpoint: "/eth/v1/node/syncing",
      meth: MethodGet.}
   ## https://ethereum.github.io/eth2.0-APIs/#/Node/getSyncingStatus
 
-proc getVersion*(): RestResponse[DataRestVersion] {.
+proc getNetworkIdentity*(): RestResponse[DataRestNetworkIdentity] {.
+     rest, endpoint: "/eth/v1/node/identity",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Node/getNetworkIdentity
+
+proc getNodeVersion*(): RestResponse[DataRestNodeVersion] {.
      rest, endpoint: "/eth/v1/node/version",
      meth: MethodGet.}
   ## https://ethereum.github.io/eth2.0-APIs/#/Node/getNodeVersion
+
+proc getHealth*(): RestPlainResponse {.
+     rest, endpoint: "/eth/v1/node/health",
+     meth: MethodGet.}
+  ## https://ethereum.github.io/eth2.0-APIs/#/Node/getHealth

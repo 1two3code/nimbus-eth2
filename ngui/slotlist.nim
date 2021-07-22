@@ -1,7 +1,8 @@
 import
   std/[tables],
   NimQml,
-  ../beacon_chain/spec/[helpers, eth2_apis/beacon_rpc_client],
+  ../beacon_chain/rpc/beacon_rest_client,
+  ../beacon_chain/spec/[datatypes, digest, helpers],
   ../beacon_chain/ssz/merkleization,
   ./objecttablemodel, ./utils
 
@@ -11,25 +12,25 @@ type
     proposer_index*: int
     block_root*: string
 
-proc loadSlots*(client: RpcHttpClient, epoch: Epoch): seq[SlotInfo] {.raises: [Defect].} =
+proc loadSlots*(client: RestClientRef, epoch: Epoch): seq[SlotInfo] {.raises: [Defect].} =
   var res: seq[SlotInfo]
   let proposers = try:
-    waitFor client.get_v1_validator_duties_proposer(epoch)
+    (waitFor client.getProposerDuties(epoch)).data.data
   except Exception: # TODO chronos exceptions
-    newSeq[ValidatorDutiesTuple](SLOTS_PER_EPOCH)
+    newSeq[RestProposerDuty](SLOTS_PER_EPOCH)
 
   for i in 0..<SLOTS_PER_EPOCH:
     let
       slot = epoch.compute_start_slot_at_epoch() + i
       block_root =
         try:
-          let h = waitFor client.get_v1_beacon_headers_blockId($slot)
-          if h.header.message.slot == slot:
-            toBlockLink(hash_tree_root(h.header.message))
+          let h = waitFor client.getBlockHeaders(some slot, none Eth2Digest)
+          if h.data.data.header.message.slot == slot:
+            toBlockLink(hash_tree_root(h.data.data.header.message))
           else:
             "N/A"
-        except Exception: # TODO chronos exceptions
-          "N/A"
+        except Exception as exc: # TODO chronos exceptions
+          exc.msg
     res.add SlotInfo(
       slot: slot.int,
       proposer_index: proposers[i].validator_index.int,

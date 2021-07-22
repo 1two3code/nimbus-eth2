@@ -3,10 +3,9 @@ import NimQml
 import
   std/[sequtils, json, times],
   NimQml,
-  ../beacon_chain/eth2_json_rpc_serialization,
   ../beacon_chain/spec/[datatypes, crypto],
   ./attestationlist, ./utils,
-  ../beacon_chain/[spec/eth2_apis/beacon_rpc_client]
+  ../beacon_chain/rpc/beacon_rest_client
 
 template xxx(body): string =
   try:
@@ -17,7 +16,7 @@ template xxx(body): string =
 QtObject:
   type
     NodeModel* = ref object of QObject
-      client: RpcHttpClient
+      client: RestClientRef
       genesis: string
       attestations: string
       attester_slashings: string
@@ -34,7 +33,7 @@ QtObject:
   proc setup*(self: NodeModel) =
     self.QObject.setup
 
-  proc newNodeModel*(client: RpcHttpClient): NodeModel =
+  proc newNodeModel*(client: RestClientRef): NodeModel =
     let res = NodeModel(client: client)
     res.setup()
     res
@@ -130,12 +129,12 @@ QtObject:
     write = sethealth
 
   proc update*(self: NodeModel) {.slot.} =
-    self.setgenesis(xxx(waitFor self.client.get_v1_beacon_genesis()))
-    self.setattestations(xxx(waitFor self.client.get_v1_beacon_pool_attestations(none(uint64), none(uint64))))
-    self.setattester_slashings(xxx(waitFor self.client.get_v1_beacon_pool_attester_slashings()))
-    self.setproposer_slashings(xxx(waitFor self.client.get_v1_beacon_pool_proposer_slashings()))
-    self.setvoluntary_exits(xxx(waitFor self.client.get_v1_beacon_pool_voluntary_exits()))
-    self.setheads(xxx(waitFor self.client.get_v1_debug_beacon_heads()))
-    self.setidentity(xxx(waitFor self.client.get_v1_node_identity()))
-    self.setversion(xxx(waitFor self.client.get_v1_node_version()))
-    self.sethealth(xxx(waitFor self.client.get_v1_node_health()))
+    self.setgenesis(xxx(waitFor self.client.getBeaconGenesis()))
+    self.setattestations(xxx(waitFor self.client.getPoolAttestations(none(Slot), none(CommitteeIndex))))
+    self.setattester_slashings(xxx(waitFor self.client.getPoolAttesterSlashings()))
+    self.setproposer_slashings(xxx(waitFor self.client.getPoolProposerSlashings()))
+    self.setvoluntary_exits(xxx(waitFor self.client.getPoolVoluntaryExits()))
+    self.setheads(xxx(waitFor self.client.getDebugChainHeads()))
+    self.setidentity(xxx(waitFor self.client.getNetworkIdentity()))
+    self.setversion(xxx(waitFor self.client.getNodeVersion()))
+    self.sethealth(xxx(waitFor self.client.getHealth()))

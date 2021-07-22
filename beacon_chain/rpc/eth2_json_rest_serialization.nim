@@ -1,5 +1,5 @@
 import
-  std/[typetraits],
+  std/[json, typetraits],
   stew/[results, base10, byteutils, endians2],
   chronicles, presto,
   faststreams/[outputs],
@@ -10,7 +10,7 @@ import
   ../spec/[crypto, digest, datatypes/phase0, eth2_apis/callsigs_types],
   ../ssz/merkleization,
   rest_utils
-export json_serialization
+export json_serialization, callsigs_types
 
 Json.createFlavor RestJson
 
@@ -60,13 +60,44 @@ type
     status*: string
     validator*: Validator
 
-  RestVersion* = object
+  RestBlockHeader* = object
+    slot*: Slot
+    proposer_index*: ValidatorIndex
+    parent_root*: Eth2Digest
+    state_root*: Eth2Digest
+    body_root*: Eth2Digest
+
+  RestSignedBlockHeader* = object
+    message*: RestBlockHeader
+    signature*: ValidatorSig
+
+  RestBlockHeaderInfo* = object
+    root*: Eth2Digest
+    canonical*: bool
+    header*: RestSignedBlockHeader
+
+  RestNodeVersion* = object
     version*: string
 
   RestSyncInfo* = object
     head_slot*: Slot
     sync_distance*: uint64
     is_syncing*: bool
+
+  RestChainHead* = object
+    root*: Eth2Digest
+    slot*: Slot
+
+  RestMetadata* = object
+    seq_number*: string
+    attnets*: string
+
+  RestNetworkIdentity* = object
+   peer_id*: string
+   enr*: string
+   p2p_addresses*: seq[string]
+   discovery_addresses*: seq[string]
+   metadata*: RestMetadata
 
   RestConfig* = object
     CONFIG_NAME*: string
@@ -143,33 +174,66 @@ type
   DataEnclosedObject*[T] = object
     data*: T
 
+  DataMetaEnclosedObject*[T] = object
+    data*: T
+    meta*: JsonNode
+
   DataRootEnclosedObject*[T] = object
     dependent_root*: Eth2Digest
     data*: T
 
-  DataRestBeaconGenesis* = DataEnclosedObject[RestBeaconGenesis]
-  DataRestFork* = DataEnclosedObject[Fork]
-  DataRestProposerDuties* = DataRootEnclosedObject[seq[RestProposerDuty]]
+  DataRestAttestation* = DataEnclosedObject[Attestation]
+  DataRestAttestationData* = DataEnclosedObject[AttestationData]
   DataRestAttesterDuties* = DataRootEnclosedObject[seq[RestAttesterDuty]]
   DataRestBeaconBlock* = DataEnclosedObject[phase0.BeaconBlock]
-  DataRestAttestationData* = DataEnclosedObject[AttestationData]
-  DataRestAttestation* = DataEnclosedObject[Attestation]
+  DataRestBeaconGenesis* = DataEnclosedObject[RestBeaconGenesis]
+  DataRestBeaconStateFinalityCheckpoints* = DataEnclosedObject[BeaconStatesFinalityCheckpointsTuple]
+  DataRestBlockHeaders* = DataEnclosedObject[RestBlockHeaderInfo]
+  DataRestConfig* = DataEnclosedObject[RestConfig]
+  DataRestDebugChainHeads* = DataEnclosedObject[seq[RestChainHead]]
+  DataRestFork* = DataEnclosedObject[Fork]
+  DataRestNetworkIdentity* = DataEnclosedObject[RestNetworkIdentity]
+  DataRestNodeVersion* = DataEnclosedObject[RestNodeVersion]
+  DataRestPeers* = DataMetaEnclosedObject[seq[NodePeerTuple]]
+  DataRestPoolAttestations* = DataEnclosedObject[seq[Attestation]]
+  DataRestPoolAttesterSlashings* = DataEnclosedObject[seq[AttesterSlashing]]
+  DataRestPoolProposerSlashings* = DataEnclosedObject[seq[ProposerSlashing]]
+  DataRestPoolVoluntaryExits* = DataEnclosedObject[seq[VoluntaryExit]]
+  DataRestProposerDuties* = DataRootEnclosedObject[seq[RestProposerDuty]]
+  DataRestSignedBeaconBlock* = DataEnclosedObject[phase0.SignedBeaconBlock]
   DataRestSyncInfo* = DataEnclosedObject[RestSyncInfo]
   DataRestValidator* = DataEnclosedObject[RestValidator]
   DataRestValidatorList* = DataEnclosedObject[seq[RestValidator]]
-  DataRestVersion* = DataEnclosedObject[RestVersion]
-  DataRestConfig* = DataEnclosedObject[RestConfig]
 
   EncodeTypes* = phase0.SignedBeaconBlock
   EncodeArrays* = seq[ValidatorIndex] | seq[Attestation] |
                   seq[SignedAggregateAndProof] | seq[RestCommitteeSubscription]
 
-  DecodeTypes* = DataRestBeaconGenesis | DataRestFork | DataRestProposerDuties |
-                 DataRestAttesterDuties | DataRestBeaconBlock |
-                 DataRestAttestationData | DataRestAttestation |
-                 DataRestSyncInfo | DataRestValidator |
-                 DataRestValidatorList | DataRestVersion |
-                 DataRestConfig | RestGenericError | RestAttestationError
+  DecodeTypes* =
+    DataRestAttestation |
+    DataRestAttestationData |
+    DataRestAttesterDuties |
+    DataRestBeaconBlock |
+    DataRestBeaconGenesis |
+    DataRestBeaconStateFinalityCheckpoints |
+    DataRestBlockHeaders |
+    DataRestConfig |
+    DataRestDebugChainHeads |
+    DataRestFork |
+    DataRestNetworkIdentity |
+    DataRestNodeVersion |
+    DataRestPeers |
+    DataRestPoolAttestations |
+    DataRestPoolAttesterSlashings |
+    DataRestPoolProposerSlashings |
+    DataRestPoolVoluntaryExits |
+    DataRestProposerDuties |
+    DataRestSignedBeaconBlock |
+    DataRestSyncInfo |
+    DataRestValidator |
+    DataRestValidatorList |
+    RestAttestationError |
+    RestGenericError
 
 proc jsonResponseWRoot*(t: typedesc[RestApiResponse],
                         data: auto,
@@ -620,12 +684,10 @@ proc decodeBytes*[T: DecodeTypes](t: typedesc[T], value: openarray[byte],
                                   contentType: string): RestResult[T] =
   case contentType
   of "application/json":
-    let res =
-      try:
-        RestJson.decode(value, T)
-      except SerializationError:
-        return err("Serialization error")
-    ok(res)
+    try:
+      ok RestJson.decode(value, T)
+    except SerializationError as exc:
+      err("Serialization error")
   else:
     err("Content-Type not supported")
 
@@ -667,3 +729,18 @@ proc encodeString*(value: StateIdent): RestResult[string] =
       ok("finalized")
     of StateIdentType.Justified:
       ok("justified")
+
+proc encodeString*(value: BlockIdent): RestResult[string] =
+  case value.kind
+  of BlockQueryKind.Slot:
+    ok(Base10.toString(uint64(value.slot)))
+  of BlockQueryKind.Root:
+    ok(hexOriginal(value.root.data))
+  of BlockQueryKind.Named:
+    case value.value
+    of BlockIdentType.Head:
+      ok("head")
+    of BlockIdentType.Genesis:
+      ok("genesis")
+    of BlockIdentType.Finalized:
+      ok("finalized")

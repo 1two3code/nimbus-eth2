@@ -3,23 +3,23 @@ import
 
 import
   std/[os, strutils],
-  chronos, metrics, json_rpc/[rpcclient],
+  chronos, metrics,
 
   # Local modules
-  ../beacon_chain/spec/[datatypes, digest, crypto, helpers],
-  ../beacon_chain/[spec/eth2_apis/beacon_rpc_client]
+  ../beacon_chain/rpc/[beacon_rest_client, rest_utils],
+  ../beacon_chain/spec/[datatypes, digest, crypto, helpers]
 
 QtObject:
   type MainModel* = ref object of QObject
     app: QApplication
     blck: BlockModel
     footer: FooterModel
-    client: RpcHttpClient
+    client: RestClientRef
     peerList: PeerList
     epochModel: EpochModel
     nodeModel: NodeModel
 
-    genesis: BeaconGenesisTuple
+    genesis: RestBeaconGenesis
     currentIndex: int
 
   proc delete*(self: MainModel) =
@@ -32,17 +32,15 @@ QtObject:
 
   proc newMainModel*(app: QApplication): MainModel =
     let
-      client = newRpcHttpClient()
-
-    waitFor client.connect("localhost", Port(8190))
+      client = RestClientRef.new("http://127.0.0.1:8190").get()
 
     let
-      headBlock = waitFor client.get_v1_beacon_blocks_blockId("head")
+      headBlock = (waitFor client.getBlock(BlockIdent.init(BlockIdentType.Head))).data.data
       epoch = headBlock.message.slot.epoch
-      genesis = waitFor client.get_v1_beacon_genesis()
+      genesis = (waitFor client.getBeaconGenesis()).data.data
       peerList = newPeerList(@[])
 
-    peerList.setNewData(waitFor client.get_v1_node_peers(some(newseq[string]()), some(newseq[string]())))
+    # peerList.setNewData(waitFor client.get_v1_node_peers(some(newseq[string]()), some(newseq[string]())))
 
     let res = MainModel(
       app: app,
@@ -68,9 +66,9 @@ QtObject:
 
   proc updateFooter(self: MainModel) {.slot.} =
     let
-      checkpoints = waitFor self.client.get_v1_beacon_states_finality_checkpoints("head")
-      head = waitFor self.client.get_v1_beacon_headers_blockId("head")
-      syncing = waitFor self.client.get_v1_node_syncing()
+      checkpoints = (waitFor self.client.getStateFinalityCheckpoints(StateIdent.init(StateIdentType.Head))).data.data
+      head = (waitFor self.client.getBlockHeader(BlockIdent.init(BlockIdentType.Head))).data.data
+      syncing = (waitFor self.client.getSyncingStatus()).data.data
 
     self.footer.finalized = $shortLog(checkpoints.finalized)
     self.footer.head = $shortLog(head.header.message.slot)
@@ -82,7 +80,10 @@ QtObject:
     self.epochModel.setNewData(self.epochModel.epoch.int, slots)
 
   proc updatePeers(self: MainModel) {.slot.} =
-    self.peerList.setNewData(waitFor self.client.get_v1_node_peers(some(newseq[string]()), some(newseq[string]())))
+    try:
+      self.peerList.setNewData(waitFor(self.client.getPeers(@[], @[])).data.data)
+    except CatchableError as exc:
+      echo exc.msg
 
   proc getPeerList*(self: MainModel): QVariant {.slot.} =
     newQVariant(self.peerList)
@@ -127,10 +128,12 @@ QtObject:
 
   proc onLoadBlock(self: MainModel, root: string) {.slot.} =
     try:
-      let blck = waitFor self.client.get_v1_beacon_blocks_blockId(root)
+      let blck = waitFor(self.client.getBlock(
+        BlockIdent.decodeString(root).tryGet())).data.data
       self.setBlck(blck)
     except CatchableError as exc:
       echo exc.msg
+    discard
 
   proc openUrl(self: MainModel, url: string) {.slot.} =
     if url.startsWith("block://"):

@@ -1,7 +1,7 @@
 import
   std/[tables],
   NimQml,
-  ../beacon_chain/spec/[eth2_apis/beacon_rpc_client],
+  ../beacon_chain/spec/datatypes,
   ./objecttablemodel, ./utils
 
 type
