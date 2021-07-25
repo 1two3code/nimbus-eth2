@@ -17,7 +17,9 @@ ApplicationWindow {
             text: "Slots"
             onClicked: main.updateSlots()
         }
-        TabButton { text: "Blocks" }
+        TabButton {
+            text: "Blocks"
+        }
         TabButton {
             text: "Peers"
             onClicked: main.updatePeers()
@@ -26,20 +28,36 @@ ApplicationWindow {
             text: "Node"
             onClicked: main.nodeModel.update()
         }
+        TabButton {
+            text: "Pools"
+            onClicked: main.poolModel.update()
+        }
     }
 
     footer: RowLayout {
-        Text { text: "Finalized" }
-        Text { text: main.footer.finalized }
+        Text {
+            text: "Finalized"
+        }
+        Text {
+            text: main.footer.finalized
+        }
 
-        Text { text: "Head" }
-        Text { text: main.footer.head }
+        Text {
+            text: "Head"
+        }
+        Text {
+            text: main.footer.head
+        }
 
-        Text { text: "Sync state" }
-        Text { text: main.footer.syncing }
+        Text {
+            text: "Sync state"
+        }
+        Text {
+            text: main.footer.syncing
+        }
 
         Timer {
-            interval: 1000
+            interval: 12000
             running: true
             repeat: true
             onTriggered: main.updateFooter()
@@ -50,9 +68,20 @@ ApplicationWindow {
         anchors.fill: parent
         currentIndex: tabBar.currentIndex
 
-        Slots { viewData: main.epochModel }
-        Blocks { viewData: main.blck }
-        Peers { viewData: main.peerList }
-        Node { viewData: main.nodeModel }
+        Slots {
+            viewData: main.epochModel
+        }
+        Blocks {
+            viewData: main.blck
+        }
+        Peers {
+            viewData: main.peerList
+        }
+        Node {
+            viewData: main.nodeModel
+        }
+        Pools {
+            viewData: main.poolModel
+        }
     }
 }

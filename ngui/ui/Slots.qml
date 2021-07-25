@@ -32,9 +32,11 @@ ColumnLayout {
         Layout.alignment: Qt.AlignHCenter
 
         columnWidthProvider: function (column) {
-            if(column == 0) return 70;
-            if(column == 1) return 70;
-            return 450;
+            if (column == 0)
+                return 70
+            if (column == 1)
+                return 70
+            return 450
         }
     }
 }

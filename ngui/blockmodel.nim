@@ -5,7 +5,9 @@ import
   NimQml,
   ../beacon_chain/rpc/beacon_rest_client,
   ../beacon_chain/spec/[datatypes, crypto],
-  ./attestationlist, ./depositlist, ./utils
+  "."/[
+    attestationlist, depositlist, attesterslashinglist, proposerslashinglist,
+    voluntaryexitlist, utils]
 
 QtObject:
   type
@@ -13,6 +15,9 @@ QtObject:
       blck: SignedBeaconBlock
       attestationsx: AttestationList
       depositsx: DepositList
+      attester_slashingsx: AttesterSlashingList
+      proposer_slashingsx: ProposerSlashingList
+      voluntary_exitsx: VoluntaryExitList
       genesis_time*: uint64
 
   proc delete*(self: BlockModel) =
@@ -24,17 +29,23 @@ QtObject:
   proc newBlockModel*(blck: SignedBeaconBlock, genesis_time: uint64): BlockModel =
     let res = BlockModel(
       blck: blck,
-      attestationsx: newAttestationList(blck.message.body.attestations.mapIt(it.toAttestationInfo())),
+      attestationsx: newAttestationList(blck.message.body.attestations.asSeq()),
       depositsx: newDepositList(blck.message.body.deposits.mapIt(it.toDepositInfo())),
+      attester_slashingsx: newAttesterSlashingList(blck.message.body.attester_slashings.asSeq()),
+      proposer_slashingsx: newProposerSlashingList(blck.message.body.proposer_slashings.asSeq()),
+      voluntary_exitsx: newVoluntaryExitList(blck.message.body.voluntary_exits.asSeq()),
       genesis_time: genesis_time,
     )
     res.setup()
     res
 
   proc `blck=`*(self: BlockModel, blck: SignedBeaconBlock) =
-      self.blck = blck
-      self.attestationsx.setNewData(blck.message.body.attestations.mapIt(it.toAttestationInfo()))
-      self.depositsx.setNewData(blck.message.body.deposits.mapIt(it.toDepositInfo()))
+    self.blck = blck
+    self.attestationsx.setNewData(blck.message.body.attestations.asSeq())
+    self.depositsx.setNewData(blck.message.body.deposits.mapIt(it.toDepositInfo()))
+    self.attester_slashingsx.setNewData(blck.message.body.attester_slashings.asSeq())
+    self.proposer_slashingsx.setNewData(blck.message.body.proposer_slashings.asSeq())
+    self.voluntary_exitsx.setNewData(blck.message.body.voluntary_exits.asSeq())
 
   proc slot*(self: BlockModel): int {.slot.} = self.blck.message.slot.int
   QtProperty[int] slot: read = slot
@@ -65,11 +76,11 @@ QtObject:
   proc graffiti*(self: BlockModel): string {.slot.} = $self.blck.message.body.graffiti
   QtProperty[string] graffiti: read = graffiti
 
-  proc proposer_slashings*(self: BlockModel): string {.slot.} = RestJson.encode(self.blck.message.body.proposer_slashings, pretty=true)
-  QtProperty[string] proposer_slashings: read = proposer_slashings
+  proc proposer_slashings*(self: BlockModel): QVariant {.slot.} = newQVariant(self.proposer_slashingsx)
+  QtProperty[QVariant] proposer_slashings: read = proposer_slashings
 
-  proc attester_slashings*(self: BlockModel): string {.slot.} = RestJson.encode(self.blck.message.body.attester_slashings.asSeq(), pretty=true)
-  QtProperty[string] attester_slashings: read = attester_slashings
+  proc attester_slashings*(self: BlockModel): QVariant {.slot.} = newQVariant(self.attester_slashingsx)
+  QtProperty[QVariant] attester_slashings: read = attester_slashings
 
   proc attestations*(self: BlockModel): QVariant {.slot.} = newQVariant(self.attestationsx)
   QtProperty[QVariant] attestations: read = attestations
@@ -77,8 +88,8 @@ QtObject:
   proc deposits*(self: BlockModel): QVariant {.slot.} = newQVariant(self.depositsx)
   QtProperty[QVariant] deposits: read = deposits
 
-  proc voluntary_exits*(self: BlockModel): string {.slot.} = RestJson.encode(self.blck.message.body.voluntary_exits.asSeq(), pretty=true)
-  QtProperty[string] voluntary_exits: read = voluntary_exits
+  proc voluntary_exits*(self: BlockModel): QVariant {.slot.} = newQVariant(self.voluntary_exitsx)
+  QtProperty[QVariant] voluntary_exits: read = voluntary_exits
 
   proc signature*(self: BlockModel): string {.slot.} = toDisplayHex(self.blck.signature)
   QtProperty[string] signature: read = signature

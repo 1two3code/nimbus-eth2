@@ -18,10 +18,6 @@ QtObject:
     NodeModel* = ref object of QObject
       client: RestClientRef
       genesis: string
-      attestations: string
-      attester_slashings: string
-      proposer_slashings: string
-      voluntary_exits: string
       heads: string
       identity: string
       version: string
@@ -38,55 +34,15 @@ QtObject:
     res.setup()
     res
 
-  proc getGenesis*(self: NodeModel): string {.slot.} = self.genesis
+  proc getgenesis*(self: NodeModel): string {.slot.} = self.genesis
   proc genesisChanged*(self: NodeModel, v: string) {.signal.}
-  proc setGenesis*(self: NodeModel, v: string) =
+  proc setgenesis*(self: NodeModel, v: string) =
     self.genesis = v
     self.genesisChanged(v)
   QtProperty[string] genesis:
     read = getgenesis
     notify = genesisChanged
     write = setgenesis
-
-  proc getattestations*(self: NodeModel): string {.slot.} = self.attestations
-  proc attestationsChanged*(self: NodeModel, v: string) {.signal.}
-  proc setattestations*(self: NodeModel, v: string) =
-    self.attestations = v
-    self.attestationsChanged(v)
-  QtProperty[string] attestations:
-    read = getattestations
-    notify = attestationsChanged
-    write = setattestations
-
-  proc getattester_slashings*(self: NodeModel): string {.slot.} = self.attester_slashings
-  proc attester_slashingsChanged*(self: NodeModel, v: string) {.signal.}
-  proc setattester_slashings*(self: NodeModel, v: string) =
-    self.attester_slashings = v
-    self.attester_slashingsChanged(v)
-  QtProperty[string] attester_slashings:
-    read = getattester_slashings
-    notify = attester_slashingsChanged
-    write = setattester_slashings
-
-  proc getproposer_slashings*(self: NodeModel): string {.slot.} = self.proposer_slashings
-  proc proposer_slashingsChanged*(self: NodeModel, v: string) {.signal.}
-  proc setproposer_slashings*(self: NodeModel, v: string) =
-    self.proposer_slashings = v
-    self.proposer_slashingsChanged(v)
-  QtProperty[string] proposer_slashings:
-    read = getproposer_slashings
-    notify = proposer_slashingsChanged
-    write = setproposer_slashings
-
-  proc getvoluntary_exits*(self: NodeModel): string {.slot.} = self.voluntary_exits
-  proc voluntary_exitsChanged*(self: NodeModel, v: string) {.signal.}
-  proc setvoluntary_exits*(self: NodeModel, v: string) =
-    self.voluntary_exits = v
-    self.voluntary_exitsChanged(v)
-  QtProperty[string] voluntary_exits:
-    read = getvoluntary_exits
-    notify = voluntary_exitsChanged
-    write = setvoluntary_exits
 
   proc getheads*(self: NodeModel): string {.slot.} = self.heads
   proc headsChanged*(self: NodeModel, v: string) {.signal.}
@@ -129,12 +85,10 @@ QtObject:
     write = sethealth
 
   proc update*(self: NodeModel) {.slot.} =
-    self.setgenesis(xxx(waitFor self.client.getBeaconGenesis()))
-    self.setattestations(xxx(waitFor self.client.getPoolAttestations(none(Slot), none(CommitteeIndex))))
-    self.setattester_slashings(xxx(waitFor self.client.getPoolAttesterSlashings()))
-    self.setproposer_slashings(xxx(waitFor self.client.getPoolProposerSlashings()))
-    self.setvoluntary_exits(xxx(waitFor self.client.getPoolVoluntaryExits()))
-    self.setheads(xxx(waitFor self.client.getDebugChainHeads()))
-    self.setidentity(xxx(waitFor self.client.getNetworkIdentity()))
-    self.setversion(xxx(waitFor self.client.getNodeVersion()))
-    self.sethealth(xxx(waitFor self.client.getHealth()))
+    self.setgenesis(xxx(waitFor(self.client.getBeaconGenesis()).data.data))
+    self.setheads(xxx(waitFor(self.client.getDebugChainHeads()).data.data.mapIt(
+      toBlockLink(it.root) & " @ " & $it.slot
+    ).join("\n")))
+    self.setidentity(xxx(waitFor(self.client.getNetworkIdentity()).data.data))
+    self.setversion(xxx(waitFor(self.client.getNodeVersion()).data.data.version))
+    self.sethealth(xxx(waitFor(self.client.getHealth())))

@@ -1,5 +1,5 @@
 import
-  std/[tables],
+  std/[sequtils, tables],
   NimQml,
   ../beacon_chain/rpc/beacon_rest_client,
   ../beacon_chain/spec/[datatypes, helpers],
@@ -39,9 +39,9 @@ QtObject:
   proc delete(self: AttestationList) =
     self.QAbstractTableModel.delete
 
-  proc newAttestationList*(data: seq[AttestationInfo]): AttestationList =
+  proc newAttestationList*(data: seq[Attestation]): AttestationList =
     new(result, delete)
-    result.data = ObjectTableModelImpl[AttestationInfo](items: data)
+    result.data = ObjectTableModelImpl[AttestationInfo](items: data.mapIt(it.toAttestationInfo()))
     result.setup
 
   method rowCount(self: AttestationList, index: QModelIndex = nil): int =
@@ -59,8 +59,8 @@ QtObject:
   method roleNames(self: AttestationList): Table[int, string] =
     self.data.roleNames()
 
-  proc setNewData*(self: AttestationList, v: seq[AttestationInfo]) =
-    self.data.setNewData(self, v)
+  proc setNewData*(self: AttestationList, v: seq[Attestation]) =
+    self.data.setNewData(self, v.mapIt(it.toAttestationInfo()))
 
   proc sort*(self: AttestationList, section: int) {.slot.} =
     self.data.sort(self, section)

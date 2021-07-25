@@ -212,3 +212,13 @@
 [submodule "vendor/eth2-networks"]
 	path = vendor/eth2-networks
 	url = https://github.com/eth2-clients/eth2-networks.git
+
+[submodule "vendor/DOtherSide"]
+	path = vendor/DOtherSide
+	url = https://github.com/filcuc/DOtherSide.git
+	branch = master
+[submodule "vendor/nimqml"]
+	path = vendor/nimqml
+	url = https://github.com/filcuc/nimqml.git
+	branch = master
+

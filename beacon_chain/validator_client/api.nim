@@ -120,7 +120,7 @@ proc checkOnline*(node: BeaconNodeServerRef) {.async.} =
   debug "Checking beacon node status"
   let agent =
     try:
-      let res = await node.client.getVersion()
+      let res = await node.client.getNodeVersion()
       res.data.data
     except CancelledError as exc:
       error "Status request was interrupted"

@@ -198,7 +198,7 @@ type
   DataRestPoolAttestations* = DataEnclosedObject[seq[Attestation]]
   DataRestPoolAttesterSlashings* = DataEnclosedObject[seq[AttesterSlashing]]
   DataRestPoolProposerSlashings* = DataEnclosedObject[seq[ProposerSlashing]]
-  DataRestPoolVoluntaryExits* = DataEnclosedObject[seq[VoluntaryExit]]
+  DataRestPoolVoluntaryExits* = DataEnclosedObject[seq[SignedVoluntaryExit]]
   DataRestProposerDuties* = DataRootEnclosedObject[seq[RestProposerDuty]]
   DataRestSignedBeaconBlock* = DataEnclosedObject[phase0.SignedBeaconBlock]
   DataRestSyncInfo* = DataEnclosedObject[RestSyncInfo]

@@ -10,12 +10,17 @@ TableView {
     Layout.fillWidth: true
     clip: true
 
-    columnWidthProvider: function (column) { return tableView.columns > 0 && tableView.width > 10 ? tableView.width / tableView.columns : 100; }
-    rowHeightProvider: function (column) { return 30; }
+    columnWidthProvider: function (column) {
+        return tableView.columns > 0
+                && tableView.width > 10 ? tableView.width / tableView.columns : 100
+    }
+    rowHeightProvider: function (column) {
+        return 35
+    }
     onWidthChanged: forceLayout()
 
-    ScrollBar.horizontal: ScrollBar{}
-    ScrollBar.vertical: ScrollBar{}
+    ScrollBar.horizontal: ScrollBar {}
+    ScrollBar.vertical: ScrollBar {}
 
     delegate: Rectangle {
         clip: true
@@ -32,7 +37,8 @@ TableView {
         }
     }
 
-    Rectangle { // mask the headers
+    Rectangle {
+        // mask the headers
         z: 3
         color: "#222222"
         y: tableView.contentY
@@ -58,7 +64,9 @@ TableView {
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight
                 clip: true
-                background: Rectangle { color: "#333333" }
+                background: Rectangle {
+                    color: "#333333"
+                }
 
                 MouseArea {
                     anchors.fill: parent

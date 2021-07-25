@@ -1,5 +1,8 @@
 import
-  NimQml, blockmodel, footermodel, epochmodel, peerlist, slotlist, nodemodel
+  NimQml,
+  "."/[
+    blockmodel, footermodel, epochmodel, peerlist, slotlist, nodemodel,
+    poolmodel]
 
 import
   std/[os, strutils],
@@ -7,6 +10,7 @@ import
 
   # Local modules
   ../beacon_chain/rpc/[beacon_rest_client, rest_utils],
+  ../beacon_chain/ssz/merkleization,
   ../beacon_chain/spec/[datatypes, digest, crypto, helpers]
 
 QtObject:
@@ -18,6 +22,7 @@ QtObject:
     peerList: PeerList
     epochModel: EpochModel
     nodeModel: NodeModel
+    poolModel: PoolModel
 
     genesis: RestBeaconGenesis
     currentIndex: int
@@ -34,13 +39,13 @@ QtObject:
     let
       client = RestClientRef.new("http://127.0.0.1:8190").get()
 
-    let
+    var
       headBlock = (waitFor client.getBlock(BlockIdent.init(BlockIdentType.Head))).data.data
       epoch = headBlock.message.slot.epoch
       genesis = (waitFor client.getBeaconGenesis()).data.data
       peerList = newPeerList(@[])
 
-    # peerList.setNewData(waitFor client.get_v1_node_peers(some(newseq[string]()), some(newseq[string]())))
+    headBlock.root = hash_tree_root(headBlock.message)
 
     let res = MainModel(
       app: app,
@@ -50,6 +55,7 @@ QtObject:
       peerList: peerList,
       epochModel: newEpochModel(client, epoch.int),
       nodeModel: newNodeModel(client),
+      poolModel: newPoolModel(client),
       genesis: genesis,
     )
     res.setup()
@@ -126,10 +132,15 @@ QtObject:
   QtProperty[QVariant] nodeModel:
     read = getNodeModel
 
+  proc getPoolModel(self: MainModel): QVariant {.slot.} = newQVariant(self.poolModel)
+  QtProperty[QVariant] poolModel:
+    read = getPoolModel
+
   proc onLoadBlock(self: MainModel, root: string) {.slot.} =
     try:
-      let blck = waitFor(self.client.getBlock(
+      var blck = waitFor(self.client.getBlock(
         BlockIdent.decodeString(root).tryGet())).data.data
+      blck.root = hash_tree_root(blck.message)
       self.setBlck(blck)
     except CatchableError as exc:
       echo exc.msg

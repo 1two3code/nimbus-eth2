@@ -14,7 +14,7 @@ Rectangle {
             TextField {
                 selectByMouse: true
                 id: urlTextField
-                Layout.fillWidth: true
+                width: 640
                 text: "head"
             }
             Button {
@@ -65,7 +65,7 @@ Rectangle {
             }
 
             Text {
-                text: "Parent Root"
+                text: "Parent root"
             }
             TextEdit {
                 text: viewData.parent_root
@@ -76,7 +76,7 @@ Rectangle {
             }
 
             Text {
-                text: "State Root"
+                text: "State root"
             }
             TextEdit {
                 text: viewData.state_root
@@ -116,36 +116,6 @@ Rectangle {
             }
 
             Text {
-                text: "Proposer slashings"
-            }
-            TextEdit {
-                text: viewData.proposer_slashings
-                textFormat: TextEdit.RichText
-                readOnly: true
-                selectByMouse: true
-            }
-
-            Text {
-                text: "Attester slashings"
-            }
-            TextEdit {
-                text: viewData.attester_slashings
-                textFormat: TextEdit.RichText
-                readOnly: true
-                selectByMouse: true
-            }
-
-            Text {
-                text: "Voluntary exits"
-            }
-            TextEdit {
-                text: viewData.voluntary_exits
-                textFormat: TextEdit.RichText
-                readOnly: true
-                selectByMouse: true
-            }
-
-            Text {
                 text: "Signature"
             }
             TextEdit {
@@ -161,9 +131,23 @@ Rectangle {
 
             TabButton {
                 text: "Attestations: " + viewData.attestations.rowCount()
+                width: implicitWidth
             }
             TabButton {
                 text: "Deposits: " + viewData.deposits.rowCount()
+                width: implicitWidth
+            }
+            TabButton {
+                text: "Attester slashings: " + viewData.attester_slashings.rowCount()
+                width: implicitWidth
+            }
+            TabButton {
+                text: "Proposer slashings: " + viewData.proposer_slashings.rowCount()
+                width: implicitWidth
+            }
+            TabButton {
+                text: "Voluntary exits: " + viewData.voluntary_exits.rowCount()
+                width: implicitWidth
             }
         }
 
@@ -175,24 +159,53 @@ Rectangle {
             ObjectTableView {
                 model: viewData.attestations
                 columnWidthProvider: function (column) {
-                    if(column == 0) return 70;
-                    if(column == 1) return 50;
-                    if(column == 2) return 250;
-                    if(column == 3) return 70;
-                    if(column == 4) return 250;
-                    if(column == 5) return 70;
-                    if(column == 6) return 250;
-                    return 350;
+                    if (column == 0)
+                        return 70
+                    if (column == 1)
+                        return 50
+                    if (column == 2)
+                        return 250
+                    if (column == 3)
+                        return 70
+                    if (column == 4)
+                        return 250
+                    if (column == 5)
+                        return 70
+                    if (column == 6)
+                        return 250
+                    return 350
                 }
             }
 
             ObjectTableView {
                 model: viewData.deposits
                 columnWidthProvider: function (column) {
-                    if(column == 0) return 250;
-                    if(column == 1) return 250;
-                    if(column == 2) return 100;
-                    return 350;
+                    if (column == 0)
+                        return 250
+                    if (column == 1)
+                        return 250
+                    if (column == 2)
+                        return 100
+                    return 350
+                }
+            }
+
+            ObjectTableView {
+                model: viewData.attester_slashings
+                columnWidthProvider: function (column) {
+                    return 350
+                }
+            }
+            ObjectTableView {
+                model: viewData.proposer_slashings
+                columnWidthProvider: function (column) {
+                    return 350
+                }
+            }
+            ObjectTableView {
+                model: viewData.voluntary_exits
+                columnWidthProvider: function (column) {
+                    return 350
                 }
             }
         }
