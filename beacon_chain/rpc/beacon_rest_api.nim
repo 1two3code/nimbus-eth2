@@ -155,9 +155,12 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
     node.withStateForBlockSlot(bslot):
       return RestApiResponse.jsonResponse(
         (
-          previous_version: getStateField(stateData.data, fork).previous_version,
-          current_version: getStateField(stateData.data, fork).current_version,
-          epoch: getStateField(stateData.data, fork).epoch
+          previous_version:
+            getStateField(stateData.data, fork).previous_version,
+          current_version:
+            getStateField(stateData.data, fork).current_version,
+          epoch:
+            getStateField(stateData.data, fork).epoch
         )
       )
     return RestApiResponse.jsonError(Http500, InternalServerError)
@@ -301,7 +304,8 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
       let vid = validator_id.get()
       case vid.kind
       of ValidatorQueryKind.Key:
-        for index, validator in getStateField(stateData.data, validators).pairs():
+        for index, validator in getStateField(stateData.data,
+                                              validators).pairs():
           if validator.pubkey == vid.key:
             let sres = validator.getStatus(current_epoch)
             if sres.isOk():
@@ -309,7 +313,9 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
                 (
                   index: ValidatorIndex(index),
                   balance:
-                    Base10.toString(getStateField(stateData.data, balances)[index]),
+                    Base10.toString(
+                      getStateField(stateData.data, balances)[index]
+                    ),
                   status: toString(sres.get()),
                   validator: validator
                 )
@@ -332,7 +338,8 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
                                             UnsupportedValidatorIndexValueError)
             vres.get()
 
-        if uint64(vindex) >= uint64(len(getStateField(stateData.data, validators))):
+        if uint64(vindex) >=
+          uint64(len(getStateField(stateData.data, validators))):
           return RestApiResponse.jsonError(Http404, ValidatorNotFoundError)
         let validator = getStateField(stateData.data, validators)[vindex]
         let sres = validator.getStatus(current_epoch)
@@ -340,7 +347,9 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
           return RestApiResponse.jsonResponse(
             (
               index: vindex,
-              balance: Base10.toString(getStateField(stateData.data, balances)[vindex]),
+              balance: Base10.toString(
+                         getStateField(stateData.data, balances)[vindex]
+                       ),
               status: toString(sres.get()),
               validator: validator
             )
@@ -773,7 +782,8 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
 
     var failures: seq[RestAttestationsFailure]
     for atindex, attestation in attestations.pairs():
-      debug "Attestation for pool", attestation = attestation, signature = $attestation.signature
+      debug "Attestation for pool", attestation = attestation,
+            signature = $attestation.signature
       if not await node.sendAttestation(attestation):
         failures.add(RestAttestationsFailure(
           index: uint64(atindex), message: "Attestation failed validation"))
