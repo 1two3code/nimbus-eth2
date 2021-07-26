@@ -547,20 +547,22 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
     return
       withBlck(bdata.data):
         RestApiResponse.jsonResponse(
-          (
-            root: blck.root,
-            canonical: bdata.refs.isAncestorOf(node.dag.head),
-            header: (
-              message: (
-                slot: blck.message.slot,
-                proposer_index: blck.message.proposer_index,
-                parent_root: blck.message.parent_root,
-                state_root: blck.message.state_root,
-                body_root: blck.message.body.hash_tree_root()
-              ),
-              signature: blck.signature
+          [
+            (
+              root: blck.root,
+              canonical: bdata.refs.isAncestorOf(node.dag.head),
+              header: (
+                message: (
+                  slot: blck.message.slot,
+                  proposer_index: blck.message.proposer_index,
+                  parent_root: blck.message.parent_root,
+                  state_root: blck.message.state_root,
+                  body_root: blck.message.body.hash_tree_root()
+                ),
+                signature: blck.signature
+              )
             )
-          )
+          ]
         )
 
   # https://ethereum.github.io/eth2.0-APIs/#/Beacon/getBlockHeader
