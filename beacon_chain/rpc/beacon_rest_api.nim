@@ -545,38 +545,20 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
         node.dag.get(blockSlot.blck)
 
     return
-      case bdata.data.kind
-      of BeaconBlockFork.Phase0:
+      withBlck(bdata.data):
         RestApiResponse.jsonResponse(
           (
-            root: bdata.data.phase0Block.root,
+            root: blck.root,
             canonical: bdata.refs.isAncestorOf(node.dag.head),
             header: (
               message: (
-                slot: bdata.data.phase0Block.message.slot,
-                proposer_index: bdata.data.phase0Block.message.proposer_index,
-                parent_root: bdata.data.phase0Block.message.parent_root,
-                state_root: bdata.data.phase0Block.message.state_root,
-                body_root: bdata.data.phase0Block.message.body.hash_tree_root()
+                slot: blck.message.slot,
+                proposer_index: blck.message.proposer_index,
+                parent_root: blck.message.parent_root,
+                state_root: blck.message.state_root,
+                body_root: blck.message.body.hash_tree_root()
               ),
-              signature: bdata.data.phase0Block.signature
-            )
-          )
-        )
-      of BeaconBlockFork.Altair:
-        RestApiResponse.jsonResponse(
-          (
-            root: bdata.data.altairBlock.root,
-            canonical: bdata.refs.isAncestorOf(node.dag.head),
-            header: (
-              message: (
-                slot: bdata.data.altairBlock.message.slot,
-                proposer_index: bdata.data.altairBlock.message.proposer_index,
-                parent_root: bdata.data.altairBlock.message.parent_root,
-                state_root: bdata.data.altairBlock.message.state_root,
-                body_root: bdata.data.altairBlock.message.body.hash_tree_root()
-              ),
-              signature: bdata.data.altairBlock.signature
+              signature: blck.signature
             )
           )
         )
@@ -595,38 +577,20 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
         res.get()
 
     return
-      case bdata.data.kind
-      of BeaconBlockFork.Phase0:
+      withBlck(bdata.data):
         RestApiResponse.jsonResponse(
           (
-            root: bdata.data.phase0Block.root,
+            root: blck.root,
             canonical: bdata.refs.isAncestorOf(node.dag.head),
             header: (
               message: (
-                slot: bdata.data.phase0Block.message.slot,
-                proposer_index: bdata.data.phase0Block.message.proposer_index,
-                parent_root: bdata.data.phase0Block.message.parent_root,
-                state_root: bdata.data.phase0Block.message.state_root,
-                body_root: bdata.data.phase0Block.message.body.hash_tree_root()
+                slot: blck.message.slot,
+                proposer_index: blck.message.proposer_index,
+                parent_root: blck.message.parent_root,
+                state_root: blck.message.state_root,
+                body_root: blck.message.body.hash_tree_root()
               ),
-              signature: bdata.data.phase0Block.signature
-            )
-          )
-        )
-      of BeaconBlockFork.Altair:
-        RestApiResponse.jsonResponse(
-          (
-            root: bdata.data.altairBlock.root,
-            canonical: bdata.refs.isAncestorOf(node.dag.head),
-            header: (
-              message: (
-                slot: bdata.data.altairBlock.message.slot,
-                proposer_index: bdata.data.altairBlock.message.proposer_index,
-                parent_root: bdata.data.altairBlock.message.parent_root,
-                state_root: bdata.data.altairBlock.message.state_root,
-                body_root: bdata.data.altairBlock.message.body.hash_tree_root()
-              ),
-              signature: bdata.data.altairBlock.signature
+              signature: blck.signature
             )
           )
         )
@@ -634,7 +598,7 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
   # https://ethereum.github.io/eth2.0-APIs/#/Beacon/publishBlock
   router.api(MethodPost, "/api/eth/v1/beacon/blocks") do (
     contentBody: Option[ContentBody]) -> RestApiResponse:
-    let blck =
+    let blockData =
       block:
         if contentBody.isNone():
           return RestApiResponse.jsonError(Http400, EmptyRequestBodyError)
@@ -645,10 +609,7 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
           # `SignedBeaconBlock` deserialization do not update `root` field,
           # so we need to calculate it.
           res.root = hash_tree_root(res.message)
-          ForkedSignedBeaconBlock(
-            kind: BeaconBlockFork.Altair,
-            altairBlock: res
-          )
+          ForkedSignedBeaconBlock.init(res)
         else:
           let phase0res = decodeBody(phase0.SignedBeaconBlock, body)
           if phase0res.isOk():
@@ -656,10 +617,7 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
             # `SignedBeaconBlock` deserialization do not update `root` field,
             # so we need to calculate it.
             res.root = hash_tree_root(res.message)
-            ForkedSignedBeaconBlock(
-              kind: BeaconBlockFork.Phase0,
-              phase0Block: res
-            )
+            ForkedSignedBeaconBlock.init(res)
           else:
             return RestApiResponse.jsonError(Http400, InvalidBlockObjectError,
                                              $phase0res.error())
@@ -668,33 +626,28 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
     if not(node.isSynced(head)):
       return RestApiResponse.jsonError(Http503, BeaconNodeInSyncError)
 
-    if head.slot >= blck.slot():
-      let blocksTopic = node.getBeaconBlocksTopic(blck.kind)
-      case blck.kind
-      of BeaconBlockFork.Phase0:
-        node.network.broadcast(blocksTopic, blck.phase0Block)
-      of BeaconBlockFork.Altair:
-        node.network.broadcast(blocksTopic, blck.altairBlock)
+    if head.slot >= blockData.slot():
+      let blocksTopic = node.getBeaconBlocksTopic(blockData.kind)
+      withBlck(blockData):
+        node.network.broadcast(blocksTopic, blck)
       return RestApiResponse.jsonError(Http202, BlockValidationError)
     else:
       let res =
-        when compiles(node.proposeSignedBlock(head, AttachedValidator(), blck)):
-          await node.proposeSignedBlock(head, AttachedValidator(), blck)
+        when compiles(node.proposeSignedBlock(head, AttachedValidator(),
+                                              blockData)):
+          await node.proposeSignedBlock(head, AttachedValidator(), blockData)
         else:
-          case blck.kind
+          case blockData.kind
           of BeaconBlockFork.Phase0:
             await node.proposeSignedBlock(head, AttachedValidator(),
-                                          blck.phase0Block)
+                                          blockData.phase0Block)
           of BeaconBlockFork.Altair:
             head
 
       if res == head:
-        let blocksTopic = node.getBeaconBlocksTopic(blck.kind)
-        case blck.kind
-        of BeaconBlockFork.Phase0:
-          node.network.broadcast(blocksTopic, blck.phase0Block)
-        of BeaconBlockFork.Altair:
-          node.network.broadcast(blocksTopic, blck.altairBlock)
+        let blocksTopic = node.getBeaconBlocksTopic(blockData.kind)
+        withBlck(blockData):
+          node.network.broadcast(blocksTopic, blck)
         return RestApiResponse.jsonError(Http202, BlockValidationError)
       else:
         return RestApiResponse.jsonMsgResponse(BlockValidationSuccess)
@@ -754,11 +707,8 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
           return RestApiResponse.jsonError(Http404, BlockNotFoundError)
         res.get()
     return
-      case bdata.data.kind
-      of BeaconBlockFork.Phase0:
-        RestApiResponse.jsonResponse((root: bdata.data.phase0Block.root))
-      of BeaconBlockFork.Altair:
-        RestApiResponse.jsonResponse((root: bdata.data.altairBlock.root))
+      withBlck(bdata.data):
+        RestApiResponse.jsonResponse((root: blck.root))
 
   # https://ethereum.github.io/eth2.0-APIs/#/Beacon/getBlockAttestations
   router.api(MethodGet,
@@ -774,15 +724,8 @@ proc installBeaconApiHandlers*(router: var RestRouter, node: BeaconNode) =
           return RestApiResponse.jsonError(Http404, BlockNotFoundError)
         res.get()
     return
-      case bdata.data.kind
-      of BeaconBlockFork.Phase0:
-        RestApiResponse.jsonResponse(
-          bdata.data.phase0Block.message.body.attestations.asSeq()
-        )
-      of BeaconBlockFork.Altair:
-        RestApiResponse.jsonResponse(
-          bdata.data.altairBlock.message.body.attestations.asSeq()
-        )
+      withBlck(bdata.data):
+        RestApiResponse.jsonResponse(blck.message.body.attestations.asSeq())
 
   # https://ethereum.github.io/eth2.0-APIs/#/Beacon/getPoolAttestations
   router.api(MethodGet, "/api/eth/v1/beacon/pool/attestations") do (
